@@ -1,15 +1,13 @@
 import re   # подключение библиотеки для поиска по документу
 
-
-
 print("Перечень возможных действий:\ndel() - удаление записи\nadd() - создание новой записи\nprint() - вывод записи\nfind() - поиск информации")
 print("Escape - завершение работы\nИные действия будут восприняты как некорректные.\n")
 
-# проверка на наличие документа с заданнм именем, если такового нет, то создаст
-f = open('INFO', 'w')
-f.close()
-#command = input("Введите команду: ")
+# проверка на наличие документа с заданнм именем, если такового нет, то создаст, но перезапишет если таковой уже существует
 
+try: f = open('INFO')
+except: f = open('INFO','w')
+f.close()
 
 
 # здесь будет объявление функций
@@ -43,48 +41,18 @@ def Dell_Empty_line():
 
 # описание функции, удаляющей информацию про указанный драйвер
 def del_line(command):
-    # вывод информации для конкретного драйвера
     if re.search('SOT\d+', command):
         target = re.search('\w+\d+', command)
-        f = open('INFO', 'r')
+        lines = []
+        with open('INFO', 'r') as f:
+            lines = f.readlines()
+            for line in lines:
+                if line.find(target[0]) != -1:
+                    lines.remove(line)
+                    print("Данные удалены")
 
-        # lines = f.readlines()
-
-        i = 1
-        j = 1   # впоследствии стоит уйти от этой переменной и сделать как - то через глобальные функции
-
-        while True:
-            # считывание строки
-            line = f.readline()
-
-            # поиск совпадений в строке
-            if target[0] in line:
-                j = i
-                print("Указанная строка удалена")
-
-            i += 1  # счетчик для перехода на новую строку
-
-            # прерывание цикла, если строка пустая (т.е. последняя)
-            if not line:
-                break
-
-        f.close()
-
-        if j == 1: print("Данных с таким названием в каталоге не существует")
-
-        #прочесть все строчки документа в память
-        f = open('INFO', 'r')
-        lines = f.readlines()
-        f.close()
-
-        del lines[j - 1]  # удаление нужной строки из памяти
-
-        #перезапись всех строк в документ из памяти, кроме удаленной
-        f = open('INFO', 'w')
-        f.writelines(lines)
-        f.close()
-
-    # проверка на правильность введенного названия
+        with open('INFO', 'w') as f:
+            f.writelines(lines)
     else:
         print("Некорректный ввод данных")
 
@@ -104,6 +72,9 @@ def add_line(command):
 
         f = open('INFO', 'r')
         new_str = name[0] + ', ' + price[0] + ', ' + power[0] + ', ' + voltage_min[0] + ', ' + voltage_max[0] + ', ' + current[0] + ', ' + protection[0]
+        voltage_min = voltage_min[0].replace('voltage_min=', '')
+        voltage_max = voltage_max[0].replace('voltage_max=', '')
+        print(name[0], voltage_min, voltage_max)
         i = 1
         j = 1
         while True:
@@ -111,8 +82,8 @@ def add_line(command):
             line = f.readline()
 
             # поиск совпадений в строке
-            if new_str in line:
-                print('найдено совпадение')
+            if (name[0] in line) or (int (voltage_min) > int (voltage_max)):
+                print('Некорректные данные: найдено совпадение или перепутаны значения напряжений')
                 j = 0
                 break
 
@@ -289,14 +260,12 @@ def find_line(command):
 while True:
     command = input("Введите команду: ")
     if re.search("Escape", command): break
-    #Find_Same_Line()
-    #Dell_Empty_line()
-    if re.match("del", command) or re.match("add", command) or re.match("print", command) or re.match("find", command):
-
-        if re.match("del", command): del_line(command)
-        if re.match("add", command): add_line(command)
-        if re.match("print", command): print_line(command)
-        if re.match("find", command): find_line(command)
-
+    elif re.match("del", command): del_line(command)
+    elif re.match("add", command): add_line(command)
+    elif re.match("print", command): print_line(command)
+    elif re.match("find", command): find_line(command)
     else:
         print("Некорректный ввод команды")
+
+    #Find_Same_Line()
+    #Dell_Empty_line()
