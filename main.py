@@ -1,4 +1,4 @@
-from String_Parser import StringParser
+from parser import StringParser
 
 print("Перечень возможных действий:\ndel() - удаление записи\nadd() - создание новой записи\nprint() - вывод записи\nfind() - поиск информации")
 print("Escape - завершение работы\nИные действия будут восприняты как некорректные.\n")
@@ -13,4 +13,5 @@ f.close()
 #придумать как это написать через case
 while True:
     command = input("Введите команду: ")
-    StringParser(command).Parser()
+    StringParser(command).parser()
+    StringParser(command).exactly_parser()
