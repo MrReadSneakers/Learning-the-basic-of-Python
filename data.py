@@ -1,57 +1,70 @@
 import re   # подключение библиотеки для поиска по документу
+import sqlite3 as sq
 
 class DataManager():
     "Класс, работающий с управлением данными"
 
-    def __init__(self, command):
-        self.command = command
+    def __init__(self, flag, parsered_string):
+        self.flag = flag
+        self.parsered_string = parsered_string
 
-    # описание функции, удаляющей информацию про указанный драйвер
-    def del_line(self):
-        if re.search('SOT\d+', self.command):
-            target = re.search('\w+\d+', self.command)
-            lines = []
-            with open('INFO', 'r') as f:
-                lines = f.readlines()
-                for line in lines:
-                    if line.find(target[0]) != -1:
-                        lines.remove(line)
-                        print("Данные удалены")
+    def del_BD(self):
+        with sq.connect("DB.db") as con:
+            cur = con.cursor()
 
-            with open('INFO', 'w') as f:
-                f.writelines(lines)
-        else:
-            print("Некорректный ввод данных")
+        match self.flag[1]:
+            case 'driver':
+                request2 = "DELETE FROM component_driver WHERE driver_id = (SELECT rowid FROM driver WHERE name = '{}')".format(self.parsered_string, )
+                cur.execute(request2)
+                request3 = "DELETE FROM driver_contract WHERE driver_id = (SELECT rowid FROM driver WHERE name = '{}')".format(self.parsered_string, )
+                cur.execute(request3)
+            case 'contract':
+                request2 = "DELETE FROM 'driver_contract' WHERE contract_id = (SELECT rowid FROM contract WHERE name = '{}')".format(self.parsered_string, )
+                cur.execute(request2)
+            case 'component':
+                request2 = "DELETE FROM 'component_driver' WHERE component_id = (SELECT rowid FROM component WHERE name = '{}')".format(self.parsered_string, )
+                cur.execute(request2)
 
-    # описание функуии, добавляющей данные в документ документу
-    def add_line(self):
-        name = re.search('name=SOT\d+', self.command)
-        price = re.search('price=\d+', self.command)
-        power = re.search('power=\d+', self.command)
-        voltage_min = re.search('voltage_min=\d+', self.command)
-        voltage_max = re.search('voltage_max=\d+', self.command)
-        current = re.search('current=\d+', self.command)
-        protection = re.search('protection=IP\d+', self.command)
-        if (name and price and power and voltage_min and voltage_max and current and protection) == None:
-            print("error")
-        else:
-            new_str = name[0] + ', ' + price[0] + ', ' + power[0] + ', ' + voltage_min[0] + ', ' + voltage_max[0] + ', ' + current[0] + ', ' + protection[0]
-            voltage_min = voltage_min[0].replace('voltage_min=', '')
-            voltage_max = voltage_max[0].replace('voltage_max=', '')
-            #print(name[0], voltage_min, voltage_max)
-            flag = 1
-            lines = []
+        request1 = "DELETE FROM '{}' WHERE name = '{}'".format(self.flag[1], self.parsered_string)
+        cur.execute(request1)
 
-            with open('INFO', 'r') as f:
-                lines = f.readlines()
-                for line in lines:
-                    if (name[0] in line) or (int(voltage_min) > int(voltage_max)):
-                        print('Некорректные данные: найдено совпадение или перепутаны значения напряжений')
-                        flag = 0
-                        break
+        con.commit()
+        con.close()
 
-            if flag == 1:
-                with open('INFO', 'a') as f:
-                    new_str = new_str + '\n'
-                    f.write(new_str)
-                print("Данные добавлены")
+
+    def add_BD(self):
+        with sq.connect("DB.db") as con:
+            cur = con.cursor()
+
+        #не забыть сделать проверку на то что добавляются только уникальные
+        match self.flag[1]:
+            case 'component_driver':
+                for name_component in range(int(sum(1 for _ in self.parsered_string)/2)):
+                    request = ("INSERT INTO component_driver (driver_id, component_id, count) VALUES ((SELECT rowid FROM driver WHERE name = '{}'), "
+                               "(SELECT rowid FROM component WHERE name = '{}'), {})"
+                               .format(self.flag[2], self.parsered_string[2 * name_component], self.parsered_string[2 * name_component + 1]))
+                    cur.execute(request)
+            case 'driver_contract':
+                for name_component in range(int(sum(1 for _ in self.parsered_string)/2)):
+                    request = ("INSERT INTO driver_contract (contract_id, driver_id, count) VALUES ((SELECT rowid FROM 'contract' WHERE name = '{}'), "
+                               "(SELECT rowid FROM driver WHERE name = '{}'), {})"
+                               .format(self.flag[2], self.parsered_string[2 * name_component], self.parsered_string[2 * name_component + 1]))
+                    cur.execute(request)
+            case 'driver':
+                cur.execute(
+                    "INSERT INTO driver(name, power, voltage_min, voltage_max, current, protection) VALUES(?, ?, ?, ?, ?, ?)",
+                    (self.parsered_string[0], self.parsered_string[1], self.parsered_string[2], self.parsered_string[3],
+                     self.parsered_string[4], self.parsered_string[5],))
+            case 'component':
+                cur.execute(
+                    "INSERT INTO component(name, price) VALUES(?, ?)",
+                    (self.parsered_string[0], self.parsered_string[1],))
+            case 'contract':
+                request = "INSERT INTO 'contract' (name, contract_date, deadline) VALUES('{}', '{}', '{}')".format(self.parsered_string[0], self.parsered_string[1], self.parsered_string[2],)
+                cur.execute(request)
+                #cur.execute(
+                #    "INSERT INTO driver('name', 'contract_date', 'deadline') VALUES(?, ?, ?)",
+                #    (self.parsered_string[0], self.parsered_string[1], self.parsered_string[2],))
+        con.commit()
+        con.close()
+

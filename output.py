@@ -1,114 +1,83 @@
-import re   # подключение библиотеки для поиска по документу
+import sqlite3 as sq
 
 class OutputManager():
     "Класс, работающий с выводом информации"
 
-    def __init__(self, command):
-        self.command = command
+    def __init__(self, flag, parsered_string):
+        self.flag = flag
+        self.parsered_string = parsered_string
+
 
     # описание функуии, осуществляющей вывод информации из документа
-    def print_line(self):
-        # вывод информации для конкретного драйвера
-        if re.search('SOT\d+', self.command):
-            target = re.search('\w+\d+', self.command)
-            lines = []
-            with open('INFO', 'r') as f:
-                lines = f.readlines()
-                for line in lines:
-                    if line.find(target[0]) != -1:
-                        print(line)
+    def print_BD(self):
+        with sq.connect("DB.db") as con:
+            cur = con.cursor()
 
-        # вывод информации по всем драйверам, содержащимся в документе
-        elif re.match('print\(\)', self.command):
-            with open('INFO', 'r') as f:
-                print(*f)
-
-        # проверка на правильность введенного названия
+        if self.flag[2] == 0:
+            request = "SELECT * FROM '{}'".format(self.flag[1], )
+            cur.execute(request)
+            #cur.execute("SELECT * FROM driver")
         else:
-            print("Некорректный ввод данных")
+            request = "SELECT * FROM '{}' WHERE name = '{}'".format(self.flag[1], self.parsered_string)
+            cur.execute(request)
+            #cur.execute("SELECT * FROM driver WHERE name = ?", (self.parsered_string,))
+
+        rows = cur.fetchall()
+        match self.flag[1]:
+            case 'driver':
+                for row in rows:
+                    print('name = ' + row[1] + ', power =', row[2], ', voltage_min =', row[3], ', voltage_max =',
+                          row[4], ', current =', row[5], ', protection = IP', row[6])
+            case 'component':
+                for row in rows:
+                    print('name = ' + row[1] + ', price =', row[2])
+            case 'contract':
+                for row in rows:
+                    print('name = ' + row[1] + ', contract_date =', row[2], ', deadline =', row[3])
 
 
-    # описание функуии, осуществляющей поиск по документу
-    def find_line(self):
-        if re.search('\w+[>=<]\w+', self.command):
+    # описание функуии, осуществляющей поиск по БД
+    def find_BD(self):
+        with sq.connect("DB.db") as con:
+            cur = con.cursor()
 
-            f = open('INFO', 'r')
+        request = "SELECT * FROM '{}' WHERE {} {} '{}'".format(self.flag[1],self.parsered_string[0],self.flag[2],self.parsered_string[1])
+        cur.execute(request)
 
-            # name = re.search('name=SOT\d+',command)
-            target = re.search('\w+[>=<]\w+', self.command)
-            target = target[0]
-            lines = f.readlines()
-
-            if '=' in target:
-                for line in lines:
-                    # поиск совпадений в строке
-                    # if target or name[0] in line:
-                    if target in line:
-                        print(line)
-
-
-            elif '<' in target:
-
-                target = target.split('<')
-
-                for line in lines:
-                    prog = re.compile(target[0] + '[=]\w+')
-                    result = prog.search(line)
-                    # print(prog)
-                    # print(result)
-
-                    result = result[0]
-                    result = result.split('=')
-                    # print(result[0])
-                    # print(result[1])
-
-                    if 'IP' in result[1] and target[1]:
-                        result[1] = result[1].replace('IP', '')
-                        target[1] = target[1].replace('IP', '')
-                        # print("Correct work")
-
-                    if 'SOT' in result[1] and target[1]:
-                        result[1] = result[1].replace('SOT', '')
-                        target[1] = target[1].replace('SOT', '')
-                        # print("Correct work")
-
-                    # поиск совпадений в строке
-                    if (target[0] in line) and (int(result[1]) < int(target[1])):
-                        print(line)
+        rows = cur.fetchall()
+        match self.flag[1]:
+            case 'driver':
+                for row in rows:
+                    print('name = ' + row[1] + ', power =', row[2], ', voltage_min =', row[3], ', voltage_max =', row[4],', current =', row[5], ', protection = IP', row[6])
+            case 'component':
+                for row in rows:
+                    print('name = ' + row[1] + ', price =', row[2])
+            case 'contract':
+                for row in rows:
+                    print('name = ' + row[1] + ', contract_date =', row[2], ', deadline =', row[3])
 
 
-            elif '>' in target:
-                target = target.split('>')
+    def cost_BD(self):
+        with sq.connect("DB.db") as con:
+            cur = con.cursor()
+        #request = "SELECT rowid FROM 'contract' WHERE name = '{}'".format(self.parsered_string, )
+        return_count_driver = "SELECT count FROM 'driver_contract' WHERE contract_id = (SELECT rowid FROM 'contract' WHERE name = '{}')".format(self.parsered_string, )
+        cur.execute(return_count_driver)
+        print(cur.fetchall())
 
-                for line in lines:
-                    prog = re.compile(target[0] + '[=]\w+')
-                    result = prog.search(line)
-                    # print(prog)
-                    # print(result)
-                    result = result[0]
-                    result = result.split('=')
-                    # print(result[0])
-                    # print(result[1])
+        return_id_driver = "SELECT driver_id FROM 'driver_contract' WHERE contract_id = (SELECT rowid FROM 'contract' WHERE name = '{}')".format(self.parsered_string, )
+        cur.execute(return_id_driver)
+        print(cur.fetchall())
 
-                    if 'IP' in result[1] and target[1]:
-                        result[1] = result[1].replace('IP', '')
-                        target[1] = target[1].replace('IP', '')
-                        # print("Correct work")
+        for row in return_id_driver:
+            return_count_component = "SELECT count FROM 'component_driver' WHERE driver_id = '{}'".format(row[1])
+            cur.execute(return_count_component)
+            print(cur.fetchall())
 
-                    if 'SOT' in result[1] and target[1]:
-                        result[1] = result[1].replace('SOT', '')
-                        target[1] = target[1].replace('SOT', '')
-                        # print("Correct work")
-
-                    # поиск совпадений в строке
-                    if (target[0] in line) and (int(result[1]) > int(target[1])):
-                        print(line)
+        return_price_component = "SELECT price FROM 'component' WHERE component_id = (SELECT component_id FROM 'component_driver' WHERE driver_id = (SELECT driver_id FROM 'driver_contract' WHERE contract_id = (SELECT rowid FROM 'contract' WHERE name = '{}')))".format(self.parsered_string, )
+        cur.execute(return_price_component)
+        print(cur.fetchall())
 
 
-            else:
-                print('Ашыпка')  # все равно не существует условия, при котором это выведется, но потом убрать
-
-            f.close()
-
-        else:
-            print('Некорректный ввод команды')
+    def components_BD(self):
+        pass
