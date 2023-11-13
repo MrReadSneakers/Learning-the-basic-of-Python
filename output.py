@@ -60,24 +60,34 @@ class OutputManager():
     def cost_BD(self):
         with sq.connect("DB.db") as con:
             cur = con.cursor()
-        #request = "SELECT rowid FROM 'contract' WHERE name = '{}'".format(self.parsered_string, )
-        return_count_driver = "SELECT count FROM 'driver_contract' WHERE contract_id = (SELECT rowid FROM 'contract' WHERE name = '{}')".format(self.parsered_string, )
-        cur.execute(return_count_driver)
-        print(cur.fetchall())
 
-        return_id_driver = "SELECT driver_id FROM 'driver_contract' WHERE contract_id = (SELECT rowid FROM 'contract' WHERE name = '{}')".format(self.parsered_string, )
-        cur.execute(return_id_driver)
-        print(cur.fetchall())
+        request = ("SELECT contract.name = '{}', driver_contract.count, component.price FROM contract "
+                   "JOIN driver_contract, component_driver, component ON contract.contract_id=driver_contract.contract_id "
+                   "AND driver_contract.driver_id=component_driver.driver_id AND component_driver.component_id=component.component_id").format(self.parsered_string, )
+        cur.execute(request)
+        rows = cur.fetchall()
+        total_price = 0
+        for row in rows:
+            if row[0] != 0:
+                total_price += row[1]*row[2]
+        print('Стоимость заказа составила: ', total_price)
 
-        for row in return_id_driver:
-            return_count_component = "SELECT count FROM 'component_driver' WHERE driver_id = '{}'".format(row[1])
-            cur.execute(return_count_component)
-            print(cur.fetchall())
-
-        return_price_component = "SELECT price FROM 'component' WHERE component_id = (SELECT component_id FROM 'component_driver' WHERE driver_id = (SELECT driver_id FROM 'driver_contract' WHERE contract_id = (SELECT rowid FROM 'contract' WHERE name = '{}')))".format(self.parsered_string, )
-        cur.execute(return_price_component)
-        print(cur.fetchall())
+        #SELECT contract.name, contract.contract_id, driver_contract.contract_id, driver_contract.driver_id, driver_contract.count,     component_driver.driver_id, component_driver.component_id, component.component_id, component.price FROM contract
+        #JOIN driver_contract, component_driver, component ON contract.contract_id=driver_contract.contract_id AND driver_contract.driver_id=component_driver.driver_id AND component_driver.component_id=component.component_id
 
 
     def components_BD(self):
-        pass
+        with sq.connect("DB.db") as con:
+            cur = con.cursor()
+
+        request = (("SELECT driver.name = '{}', component.name, component_driver.count FROM driver "
+                   "JOIN component_driver, component ON driver.driver_id=component_driver.driver_id "
+                    "AND component.component_id=component_driver.component_id")
+                   .format(self.parsered_string, ))
+        #SELECT driver.name, component.name, component_driver.count FROM driver
+        #JOIN component_driver, component ON driver.driver_id=component_driver.driver_id AND component.component_id=component_driver.component_id
+        cur.execute(request)
+        rows = cur.fetchall()
+        for row in rows:
+            if row[0] != 0:
+                print('Наименование: ', row[1], ', количество: ', row[2])
