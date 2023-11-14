@@ -1,5 +1,6 @@
 import sqlite3 as sq
 
+
 def find_data_base():
     with sq.connect("DB.db") as con:
         cur = con.cursor()
@@ -27,7 +28,7 @@ def find_data_base():
     deadline TEXT
     )""")
 
-    #возможно дедлайн сделать строковым типом, а не числовым
+    # возможно дедлайн сделать строковым типом, а не числовым
 
     cur.execute("""CREATE TABLE IF NOT EXISTS component_driver(
     component_driver_id INTEGER PRIMARY KEY AUTOINCREMENT,
