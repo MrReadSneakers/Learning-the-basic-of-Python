@@ -11,8 +11,8 @@ stringparser должен ыв итоге выдавать две перемен
 class StringParser():
     "Класс, осуществляющий анализ строки и передачу управления. Последнее под вопросом"
 
-    def __init__(self, command):
-        self.command = command
+    def __init__(self):
+        self.command = None
         self.control = None
         self.parsered_string = None
 
@@ -21,21 +21,21 @@ class StringParser():
         if (re.search("print\.\w+\(\)", self.command) and
                 (('driver' in self.command) or ('contract' in self.command) or ('component' in self.command))):
             if 'driver' in self.command:
-                self.control = ['print', 'driver', 'all']
+                self.control = ('print', 'driver', 'all')
             elif 'contract' in self.command:
-                self.control = ['print', 'contract', 'all']
+                self.control = ('print', 'contract', 'all')
             else:
-                self.control = ['print', 'component', 'all']
-            self.parsered_string = [0]
+                self.control = ('print', 'component', 'all')
+
             #print(self.control)
         elif (re.search("print\.\w+\(\w+\)", self.command) and
               (('driver' in self.command) or ('contract' in self.command) or ('component' in self.command))):
             if 'driver' in self.command:
-                self.control = ['print', 'driver', 'exactly']
+                self.control = ('print', 'driver', 'exactly')
             elif 'contract' in self.command:
-                self.control = ['print', 'contract', 'exactly']
+                self.control = ('print', 'contract', 'exactly')
             else:
-                self.control = ['print', 'component', 'exactly']
+                self.control = ('print', 'component', 'exactly')
             self.parsered_string = ((re.search("\(\w+\)", self.command))[0])[1:-1]
 
         else:
@@ -45,11 +45,13 @@ class StringParser():
         if re.search("component_driver", self.command):
             self.control = 'add','component_driver','{}'.format((re.search("\(\w+:", self.command)[0])[1:-1])
             self.parsered_string = re.split(", |-", (self.command.split(': '))[1].replace(')', ''))
+            self.parsered_string = tuple(self.parsered_string)
             print(self.parsered_string[::2])
 
         elif re.search("driver_contract", self.command):
             self.control = 'add','driver_contract','{}'.format((re.search("\(\w+:", self.command)[0])[1:-1])
             self.parsered_string = re.split(", |-", (self.command.split(': '))[1].replace(')', ''))
+            self.parsered_string = tuple(self.parsered_string)
 
         elif re.search("driver", self.command):
             name = re.search('name=\w+', self.command)
@@ -71,7 +73,7 @@ class StringParser():
                                         voltage_max[0].replace('voltage_max=',''),
                                         current[0].replace('current=',''),
                                         protection[0].replace('protection=IP',''))
-                self.control = ['add', 'driver']
+                self.control = ('add', 'driver')
                 # print(self.parsered_string)
 
         elif re.search("component", self.command):
@@ -81,13 +83,14 @@ class StringParser():
                 print("Ошибка в передаваемых данных в команду или некорректно введена цена")
             else:
                 self.parsered_string = (name[0].replace('name=', ''), price[0].replace('price=', ''))
-                self.control = ['add', 'component']
+                self.control = ('add', 'component')
 
         # Придумать как адекватно реализовать этот блок с датами
         elif re.search("contract", self.command):
             name = re.search('name=\w+', self.command)
             contract_date = re.search('contract_date=\d{4}/\d\d/\d\d', self.command)
             deadline = re.search('deadline=\d{4}/\d\d/\d\d', self.command)
+            print(deadline[0])
 
             select_deadline = re.split("=|/|\n", deadline[0])
             select_deadline = date(int(select_deadline[1]), int(select_deadline[2]), int(select_deadline[3]))
@@ -103,7 +106,7 @@ class StringParser():
                     self.parsered_string = (name[0].replace('name=', ''),
                                             contract_date[0].replace('contract_date=', ''),
                                             deadline[0].replace('deadline=', ''))
-                    self.control = ['add', 'contract']
+                    self.control = ('add', 'contract')
 
         else:
             print("Ошибка в вводе типа обрабатываемых данных")
@@ -112,11 +115,11 @@ class StringParser():
         if (re.search("del\.\w+\(\w+\)", self.command) and
                 (('driver' in self.command) or ('contract' in self.command) or ('component' in self.command))):
             if 'driver' in self.command:
-                self.control = ['del', 'driver']
+                self.control = ('del', 'driver')
             elif 'contract' in self.command:
-                self.control = ['del', 'contract']
+                self.control = ('del', 'contract')
             else:
-                self.control = ['del', 'component']
+                self.control = ('del', 'component')
             self.parsered_string = ((re.search("\(\w+\)", self.command))[0])[1:-1]
 
         else:
@@ -128,17 +131,17 @@ class StringParser():
             target = ((re.search("\w+\(", self.command))[0])[:-1]
             print('target: ', target)
             if '>' in self.command:
-                self.control = ['find', target, '>']
+                self.control = ('find', target, '>')
                 self.parsered_string = re.search("(\w+[>=<]\d{4}.\d\d.\d\d)|(\w+[>=<]\w+)", self.command)
                 self.parsered_string = self.parsered_string[0]
                 self.parsered_string = self.parsered_string.split(self.control[2])
             elif '=' in self.command:
-                self.control = ['find', target, '=']
+                self.control = ('find', target, '=')
                 self.parsered_string = re.search("(\w+[>=<]\d{4}.\d\d.\d\d)|(\w+[>=<]\w+)", self.command)
                 self.parsered_string = self.parsered_string[0]
-                self.parsered_string = self.parsered_string.split(self.control[2])
+                self.parsered_string = tuple(self.parsered_string.split(self.control[2]))
             elif '<' in self.command:
-                self.control = ['find', target, '<']
+                self.control = ('find', target, '<')
                 self.parsered_string = re.search("(\w+[>=<]\d{4}.\d\d.\d\d)|(\w+[>=<]\w+)", self.command)
                 self.parsered_string = self.parsered_string[0]
                 self.parsered_string = self.parsered_string.split(self.control[2])
@@ -158,7 +161,8 @@ class StringParser():
         self.control = ['components']
         self.parsered_string = (re.split("\(|\)", self.command))[1]
 
-    def exactly_parser(self):
+    def exactly_parser(self, command):
+        self.command = command
         action = re.match("\w+", self.command)
         # print(action[0])
         match action[0]:

@@ -13,17 +13,18 @@ find_data_base()
 
 # проверка на корректность ввода команды и переход в функцию ее выполняющую
 # придумать как это написать через case
+object_string_parser = StringParser()
+
 while True:
     command = input("Введите команду: ")
-    object_string_parser = StringParser(command)
-    object_string_parser.exactly_parser()
+    object_string_parser.exactly_parser(command)
 
     control = object_string_parser.control
     parsered_string = object_string_parser.parsered_string
     print('Значение control: ', object_string_parser.control)
-    print(type(parsered_string))
-    print('Значение parsered_string: ', object_string_parser.parsered_string)
     print(type(control))
+    print('Значение parsered_string: ', object_string_parser.parsered_string)
+    print(type(parsered_string))
 
     if control is not None:
         match control[0]:
